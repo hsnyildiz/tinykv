@@ -32,7 +32,6 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use serde_json;
 
 /// Errors that can occur while using the TinyKV store.
 #[derive(Debug)]
@@ -47,22 +46,22 @@ pub enum TinyKVError {
 
 impl From<io::Error> for TinyKVError {
     fn from(err: io::Error) -> Self {
-        TinyKVError::Io(err)
+        Self::Io(err)
     }
 }
 
 impl From<serde_json::Error> for TinyKVError {
     fn from(err: serde_json::Error) -> Self {
-        TinyKVError::Serialization(err)
+        Self::Serialization(err)
     }
 }
 
 impl std::fmt::Display for TinyKVError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TinyKVError::Io(e) => write!(f, "IO error: {}", e),
-            TinyKVError::Serialization(e) => write!(f, "Serialization error: {}", e),
-            TinyKVError::TimeError => write!(f, "Time error"),
+            Self::Io(e) => write!(f, "IO error: {e}"),
+            Self::Serialization(e) => write!(f, "Serialization error: {e}"),
+            Self::TimeError => write!(f, "Time error"),
         }
     }
 }
@@ -97,7 +96,7 @@ impl TinyKV {
             Err(e) => return Err(TinyKVError::Io(e)),
         };
 
-        Ok(TinyKV {
+        Ok(Self {
             path: path_buf,
             data,
             auto_save: false,
@@ -175,14 +174,14 @@ impl TinyKV {
             .as_secs();
 
         if let Some(entry) = self.data.get(key) {
-            if let Some(expiry) = entry.expires_at {
-                if now > expiry {
-                    self.data.remove(key);
-                    if self.auto_save {
-                        self.save()?;
-                    }
-                    return Ok(None);
+            if let Some(expiry) = entry.expires_at
+                && now > expiry
+            {
+                self.data.remove(key);
+                if self.auto_save {
+                    self.save()?;
                 }
+                return Ok(None);
             }
 
             let value = serde_json::from_value(entry.value.clone())?;
